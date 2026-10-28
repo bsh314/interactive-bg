@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>interactive-bg — benchmark</title>
+    <style>
+      body { margin: 0; background: #0e1116; color: #ddd; font: 13px ui-monospace, monospace; }
+      #host { width: 1920px; height: 1080px; }
+      pre { position: fixed; top: 0; left: 0; margin: 0; padding: 8px; background: #000a; z-index: 1; }
+    </style>
+  </head>
+  <body>
+    <pre id="out">running…</pre>
+    <div id="host"></div>
+    <!--
+      Deterministic frame benchmark. The library's requestAnimationFrame is
+      replaced so frames can be driven synchronously with fixed timestamps.
+
+      Query params:
+        dpr=2          devicePixelRatio to emulate
+        frames=300     measured frames per scenario
+        flush=1        force rasterisation after each frame (GPU readback of 1px)
+        renderer=canvas2d|webgl
+        style=topo|dots|plus
+    -->
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const DPR = Number(params.get('dpr') ?? 2);
+      const FRAMES = Number(params.get('frames') ?? 300);
+      const FLUSH = params.get('flush') !== '0';
+      const RENDERER = params.get('renderer') ?? 'canvas2d';
+      const STYLE = params.get('style') ?? 'topo';
+      const WARMUP = 60;
+
+      Object.defineProperty(window, 'devicePixelRatio', { get: () => DPR });
+      let pending = null;
+      window.requestAnimationFrame = (cb) => ((pending = cb), 1);
+      window.cancelAnimationFrame = () => (pending = null);
+
+      const lib = await import('../src/index.ts');
+
+      const host = document.getElementById('host');
+      const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      probe.canvas.width = probe.canvas.height = 1;
+
+      async function scenario(name, options, { pointer = false, clickEvery = 0 } = {}) {
+        const bg = lib.createBackground(host, lib[STYLE](options), {
+          maxFps: 0,
+          idleFps: 0,
+          maxDpr: DPR,
+          renderer: RENDERER,
+        });
+        await new Promise((r) => setTimeout(r, 50)); // let ResizeObserver settle
+        const rect = bg.canvas.getBoundingClientRect();
+        let now = 1000;
+        const samples = [];
+
+        for (let f = 0; f < WARMUP + FRAMES; f++) {
+          if (pointer) {
+            const a = f * 0.05;
+            window.dispatchEvent(
+              new PointerEvent('pointermove', {
+                clientX: rect.left + rect.width / 2 + Math.cos(a) * 400,
+                clientY: rect.top + rect.height / 2 + Math.sin(a) * 250,
+              }),
+            );
+          }
+          if (clickEvery && f % clickEvery === 0) {
+            window.dispatchEvent(
+              new PointerEvent('pointerdown', {
+                clientX: rect.left + 300 + ((f * 137) % 1300),
+                clientY: rect.top + 200 + ((f * 71) % 680),
+              }),
+            );
+          }
+          const cb = pending;
+          pending = null;
+          now += 1000 / 60;
+          const t0 = performance.now();
+          cb?.(now);
+          if (FLUSH) {
+            probe.drawImage(bg.canvas, 0, 0, 1, 1);
+            probe.getImageData(0, 0, 1, 1);
+          }
+          const t1 = performance.now();
+          if (f >= WARMUP) samples.push(t1 - t0);
+        }
+        bg.destroy();
+
+        samples.sort((a, b) => a - b);
+        const mean = samples.reduce((s, v) => s + v, 0) / samples.length;
+        return {
+          name,
+          mean: +mean.toFixed(2),
+          p50: +samples[Math.floor(samples.length * 0.5)].toFixed(2),
+          p95: +samples[Math.floor(samples.length * 0.95)].toFixed(2),
+        };
+      }
+
+      const SCENARIOS = {
+        topo: [
+          ['drift', {}],
+          ['drift+pointer', {}, { pointer: true }],
+          ['dense (levels 40, res 5)', { levels: 40, resolution: 5 }],
+        ],
+        dots: [
+          ['wander', {}],
+          ['wander+pointer', {}, { pointer: true }],
+          ['waves (click every 0.25 s)', {}, { pointer: true, clickEvery: 15 }],
+          ['dense (spacing 12)', { spacing: 12 }],
+        ],
+        plus: [
+          ['wander', {}],
+          ['wander+pointer', {}, { pointer: true }],
+          ['waves (click every 0.25 s)', {}, { pointer: true, clickEvery: 15 }],
+          ['dense (spacing 12)', { spacing: 12 }],
+        ],
+      };
+      const results = [];
+      for (const args of SCENARIOS[STYLE]) results.push(await scenario(...args));
+
+      const env = `${STYLE}, ${RENDERER}, 1920×1080 css, dpr ${DPR}, flush ${FLUSH}, ${FRAMES} frames (ms/frame)`;
+      document.getElementById('out').textContent =
+        env + '\n' + results.map((r) => `${r.name.padEnd(28)} mean ${r.mean}  p50 ${r.p50}  p95 ${r.p95}`).join('\n');
+      window.__bench = { env, results };
+    </script>
+  </body>
+</html>

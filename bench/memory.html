@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>interactive-bg — memory benchmark</title>
+    <style>
+      body { margin: 0; background: #0e1116; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Mounts a full-viewport background for bench/memory.mjs.
+      Query params: style=topo|dots|plus, opts=<JSON style options>, engine=<JSON engine options>, off=1 (blank page baseline),
+      floor=<fps> (clear-only WebGL canvas: the cost of presenting frames at all)
+    -->
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      if (params.has('floor')) {
+        // Floor: a full-screen WebGL canvas that only clears, at `floor` fps. This is the
+        // browser's own cost of presenting a new frame, which any animated canvas pays.
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%';
+        document.body.prepend(canvas);
+        const { engineDefaults } = await import('../src/index.ts');
+        const dpr = Math.min(devicePixelRatio, engineDefaults.maxDpr);
+        canvas.width = innerWidth * dpr;
+        canvas.height = innerHeight * dpr;
+        const gl = canvas.getContext('webgl2', { antialias: false, depth: false, stencil: false });
+        const interval = 1000 / Number(params.get('floor'));
+        let last = 0;
+        const tick = (now) => {
+          if (now - last >= interval * 0.85) {
+            last = now;
+            gl.clearColor(0.05, 0.07, 0.09, (now % 1000) / 1000);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        window.__canvasBytes = () => canvas.width * canvas.height * 4;
+      } else if (params.get('off') !== '1') {
+        const lib = await import('../src/index.ts');
+        const json = (name) => JSON.parse(params.get(name) ?? '{}');
+        const style = lib[params.get('style') ?? 'topo'];
+        const bg = lib.createBackground(null, style({ ...json('opts') }), json('engine'));
+        window.__canvasBytes = () => bg.canvas.width * bg.canvas.height * 4;
+      } else {
+        window.__canvasBytes = () => 0;
+      }
+      window.__ready = true;
+    </script>
+  </body>
+</html>

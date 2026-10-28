@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>interactive-bg — realtime benchmark</title>
+    <style>
+      body { margin: 0; background: #0e1116; color: #ddd; font: 13px ui-monospace, monospace; }
+      pre { position: fixed; top: 0; left: 0; margin: 0; padding: 8px; background: #000a; z-index: 1; }
+    </style>
+  </head>
+  <body>
+    <pre id="out">running…</pre>
+    <!--
+      Real-time benchmark: real requestAnimationFrame, full-viewport background.
+      Reports main-thread milliseconds spent in the library per second of wall time
+      (i.e. CPU cost a visitor pays) and how many frames were drawn.
+
+      Query params: seconds=5 (per phase), renderer=auto|webgl|canvas2d, style=topo|dots|plus
+    -->
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const SECONDS = Number(params.get('seconds') ?? 5);
+      const RENDERER = params.get('renderer') ?? 'auto';
+
+      let busy = 0;
+      let callbacks = 0;
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) =>
+        raf((now) => {
+          const t0 = performance.now();
+          cb(now);
+          busy += performance.now() - t0;
+          callbacks++;
+        });
+
+      // Count frames that actually drew something: Canvas 2D clears once per frame, WebGL draws once.
+      let draws = 0;
+      const countCall = (proto, method) => {
+        const original = proto[method];
+        proto[method] = function (...args) {
+          draws++;
+          return original.apply(this, args);
+        };
+      };
+      countCall(CanvasRenderingContext2D.prototype, 'clearRect');
+      countCall(WebGL2RenderingContext.prototype, 'drawArrays');
+
+      const lib = await import('../src/index.ts');
+      const STYLE = params.get('style') ?? 'topo';
+      const bg = lib.createBackground(null, lib[STYLE](), { renderer: RENDERER });
+
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      async function phase(name, during) {
+        await wait(500);
+        busy = 0; callbacks = 0; draws = 0;
+        const start = performance.now();
+        const stop = during?.();
+        await wait(SECONDS * 1000);
+        stop?.();
+        const secs = (performance.now() - start) / 1000;
+        return { name, msPerSec: +(busy / secs).toFixed(1), drawsPerSec: +(draws / secs).toFixed(1), rafPerSec: +(callbacks / secs).toFixed(1) };
+      }
+
+      const results = [];
+      results.push(await phase('drift only'));
+      results.push(
+        await phase('pointer moving', () => {
+          let a = 0;
+          const id = setInterval(() => {
+            a += 0.05;
+            window.dispatchEvent(new PointerEvent('pointermove', {
+              clientX: innerWidth / 2 + Math.cos(a) * 300,
+              clientY: innerHeight / 2 + Math.sin(a) * 200,
+            }));
+          }, 16);
+          return () => clearInterval(id);
+        }),
+      );
+      // The pointer stops over the page: once the animation has settled, only the idle animation should remain.
+      results.push(
+        await phase('pointer resting', () => {
+          window.dispatchEvent(new PointerEvent('pointermove', { clientX: innerWidth / 2, clientY: innerHeight / 2 }));
+        }),
+      );
+
+      const env = `${STYLE}, ${bg.renderer}, ${innerWidth}×${innerHeight} css, dpr ${devicePixelRatio}, ${SECONDS}s per phase`;
+      document.getElementById('out').textContent =
+        env + '\n' + results.map((r) => `${r.name.padEnd(16)} ${r.msPerSec} ms/s  ${r.drawsPerSec} draws/s  ${r.rafPerSec} rAF/s`).join('\n');
+      window.__bench = { env, results };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,194 @@
+{
+  "name": "interactive-bg",
+  "version": "0.0.0",
+  "description": "Lightweight, interactive animated backgrounds for websites: pick a style, drop it behind your content. WebGL with a Canvas 2D fallback, zero dependencies, import only the renderer you need.",
+  "keywords": [
+    "background",
+    "animated-background",
+    "interactive",
+    "canvas",
+    "webgl",
+    "topographic",
+    "contour",
+    "hero",
+    "generative"
+  ],
+  "license": "MIT",
+  "author": "Bohdan Shcherbak",
+  "homepage": "https://bsh314.github.io/interactive-bg/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bsh314/interactive-bg.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bsh314/interactive-bg/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "topo": [
+        "./dist/topo/index.d.ts"
+      ],
+      "topo/*": [
+        "./dist/topo/*.d.ts"
+      ],
+      "dots": [
+        "./dist/dots/index.d.ts"
+      ],
+      "dots/*": [
+        "./dist/dots/*.d.ts"
+      ],
+      "plus": [
+        "./dist/plus/index.d.ts"
+      ],
+      "plus/*": [
+        "./dist/plus/*.d.ts"
+      ]
+    }
+  },
+  "unpkg": "./dist/index.umd.js",
+  "jsdelivr": "./dist/index.umd.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./topo": {
+      "import": {
+        "types": "./dist/topo/index.d.ts",
+        "default": "./dist/topo/index.js"
+      },
+      "require": {
+        "types": "./dist/topo/index.d.cts",
+        "default": "./dist/topo/index.cjs"
+      }
+    },
+    "./topo/webgl": {
+      "import": {
+        "types": "./dist/topo/webgl.d.ts",
+        "default": "./dist/topo/webgl.js"
+      },
+      "require": {
+        "types": "./dist/topo/webgl.d.cts",
+        "default": "./dist/topo/webgl.cjs"
+      }
+    },
+    "./topo/canvas2d": {
+      "import": {
+        "types": "./dist/topo/canvas2d.d.ts",
+        "default": "./dist/topo/canvas2d.js"
+      },
+      "require": {
+        "types": "./dist/topo/canvas2d.d.cts",
+        "default": "./dist/topo/canvas2d.cjs"
+      }
+    },
+    "./dots": {
+      "import": {
+        "types": "./dist/dots/index.d.ts",
+        "default": "./dist/dots/index.js"
+      },
+      "require": {
+        "types": "./dist/dots/index.d.cts",
+        "default": "./dist/dots/index.cjs"
+      }
+    },
+    "./dots/webgl": {
+      "import": {
+        "types": "./dist/dots/webgl.d.ts",
+        "default": "./dist/dots/webgl.js"
+      },
+      "require": {
+        "types": "./dist/dots/webgl.d.cts",
+        "default": "./dist/dots/webgl.cjs"
+      }
+    },
+    "./dots/canvas2d": {
+      "import": {
+        "types": "./dist/dots/canvas2d.d.ts",
+        "default": "./dist/dots/canvas2d.js"
+      },
+      "require": {
+        "types": "./dist/dots/canvas2d.d.cts",
+        "default": "./dist/dots/canvas2d.cjs"
+      }
+    },
+    "./plus": {
+      "import": {
+        "types": "./dist/plus/index.d.ts",
+        "default": "./dist/plus/index.js"
+      },
+      "require": {
+        "types": "./dist/plus/index.d.cts",
+        "default": "./dist/plus/index.cjs"
+      }
+    },
+    "./plus/webgl": {
+      "import": {
+        "types": "./dist/plus/webgl.d.ts",
+        "default": "./dist/plus/webgl.js"
+      },
+      "require": {
+        "types": "./dist/plus/webgl.d.cts",
+        "default": "./dist/plus/webgl.cjs"
+      }
+    },
+    "./plus/canvas2d": {
+      "import": {
+        "types": "./dist/plus/canvas2d.d.ts",
+        "default": "./dist/plus/canvas2d.js"
+      },
+      "require": {
+        "types": "./dist/plus/canvas2d.d.cts",
+        "default": "./dist/plus/canvas2d.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "dev": "vite",
+    "bench": "vite --open /bench/",
+    "bench:memory": "node bench/memory.mjs",
+    "build": "vite build && vite build --mode umd && tsc -p tsconfig.build.json && node scripts/fix-types.mjs",
+    "build:demo": "vite build --mode demo",
+    "preview:demo": "vite preview --mode demo --outDir site",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run check && changeset publish",
+    "prepublishOnly": "npm run check",
+    "size": "node scripts/size.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "playwright-core": "^1.64.1",
+    "rolldown": "^1.2.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

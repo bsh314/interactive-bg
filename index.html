@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>interactive-bg — interactive animated website backgrounds</title>
+    <meta name="description" content="Interactive, animated canvas backgrounds for websites: topographic lines, dot and plus grids. WebGL2 or Canvas 2D, no dependencies." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1116'/%3E%3Cpath d='M10 16h12M16 10v12' stroke='%237dd3a8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    />
+    <style>
+      :root {
+        --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        --bg: #0e1116;
+        --fg: #e8ecf2;
+        --muted: #8b94a3;
+        --panel: rgba(20, 24, 31, 0.78);
+        --panel-solid: rgba(20, 24, 31, 0.96);
+        --border: rgba(255, 255, 255, 0.08);
+        --accent: #7dd3a8;
+        color-scheme: dark;
+      }
+      :root[data-theme='light'] {
+        --bg: #f4f1ea;
+        --fg: #1d232b;
+        --muted: #6a7280;
+        --panel: rgba(255, 255, 255, 0.8);
+        --panel-solid: rgba(250, 248, 243, 0.97);
+        --border: rgba(0, 0, 0, 0.08);
+        --accent: #b4532a;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.5 var(--font-sans);
+        transition: background 0.3s;
+      }
+
+      .hero {
+        min-height: 100vh;
+        display: grid;
+        place-content: center;
+        text-align: center;
+        padding: 2rem 1rem;
+      }
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2.25rem, 6vw, 4.5rem);
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+      .hero p { color: var(--muted); max-width: 34rem; margin: 1rem auto 1.5rem; }
+      .hero code {
+        display: inline-block;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        backdrop-filter: blur(6px);
+        font: 14px var(--font-mono);
+      }
+
+      .section {
+        max-width: 56rem;
+        margin: 0 auto 6rem;
+        padding: 0 1rem;
+      }
+      .section h2 { letter-spacing: -0.02em; }
+      .card {
+        position: relative;
+        height: 320px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: #10302a;
+        display: grid;
+        place-content: center;
+        color: #d9f3e7;
+        font-weight: 600;
+        font-size: 1.25rem;
+      }
+      .card > span { position: relative; z-index: 1; }
+
+      .panel {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        width: min(520px, calc(100vw - 2rem));
+        max-height: calc(100vh - 5rem);
+        overflow: auto;
+        border-radius: 14px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+        z-index: 10;
+        font-size: 12.5px;
+      }
+      .panel[hidden] { display: none; }
+      .panel-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: grid;
+        gap: 0.5rem;
+        padding: 0.75rem 0.9rem;
+        background: var(--panel-solid);
+        border-bottom: 1px solid var(--border);
+      }
+      .panel-body { padding: 0.25rem 0.9rem 0.9rem; }
+      .panel h3 {
+        margin: 0.9rem 0 0.4rem;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem 1.1rem; }
+      .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 0.5rem; padding: 0.2rem 0; }
+      .row.wide { grid-column: 1 / -1; }
+      .row input[type='range'] { grid-column: 1 / -1; width: 100%; margin: 0.15rem 0 0; accent-color: var(--accent); }
+      .row output { color: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+      code { font-family: var(--font-mono); font-size: 0.92em; }
+      .row input[type='color'] { width: 2rem; height: 1.4rem; border: none; padding: 0; background: none; cursor: pointer; }
+      .row input[type='color']:disabled { opacity: 0.35; }
+      .row .check { display: flex; align-items: center; gap: 0.35rem; color: var(--muted); }
+      .row .check input { accent-color: var(--accent); margin: 0; }
+      .row .inline { display: flex; align-items: center; gap: 0.6rem; }
+      .buttons { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+      button {
+        font: inherit;
+        color: var(--fg);
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 0.3rem 0.6rem;
+        cursor: pointer;
+      }
+      button:hover { border-color: var(--accent); }
+      .tabs { display: flex; gap: 0.25rem; padding: 0.2rem; border: 1px solid var(--border); border-radius: 9px; }
+      .tabs button { flex: 1; border: none; text-transform: capitalize; }
+      .tabs button[aria-pressed='true'] { background: var(--accent); color: var(--bg); }
+      .toggle {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 10;
+        background: var(--panel);
+        backdrop-filter: blur(10px);
+      }
+      .links { margin-top: 1rem; display: flex; gap: 1.25rem; justify-content: center; font-size: 14px; }
+      .links a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border); }
+      .links a:hover { color: var(--fg); }
+      @media (max-width: 640px) {
+        .panel { left: 0.5rem; right: 0.5rem; width: auto; top: auto; bottom: 3.5rem; max-height: 55vh; }
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>interactive-bg</h1>
+        <p id="tagline"></p>
+        <code>npm install interactive-bg</code>
+        <nav class="links">
+          <a href="https://github.com/bsh314/interactive-bg">GitHub</a>
+          <a href="https://www.npmjs.com/package/interactive-bg">npm</a>
+        </nav>
+      </section>
+
+      <section class="section">
+        <h2>Scoped to an element</h2>
+        <p style="color: var(--muted)">
+          Pass any element as the target and the background fills just that element. Hover and click it.
+        </p>
+        <div class="card" id="card"><span>Hover &amp; click me</span></div>
+      </section>
+
+      <section class="section">
+        <h2>Fading out</h2>
+        <p style="color: var(--muted)">
+          With <code>fadeOutBottom: 160</code>, the pattern fades from its own opacity to nothing over the bottom 160&nbsp;px of
+          the element. The background colour stays solid. <code>fadeOutTop</code>, <code>fadeOutLeft</code> and
+          <code>fadeOutRight</code> do the same towards the other edges; try them on the page background in the panel.
+        </p>
+        <div class="card" id="card-fade"><span>Fades out at the bottom</span></div>
+      </section>
+    </main>
+
+    <form class="panel" id="panel" onsubmit="return false">
+      <div class="panel-head">
+        <div class="tabs" id="tabs"></div>
+        <div class="buttons" id="actions"></div>
+      </div>
+      <div class="panel-body" id="controls"></div>
+    </form>
+    <button class="toggle" id="toggle" type="button">Hide controls</button>
+
+    <script type="module">
+      import { createBackground, dots, engineDefaults, plus, topo } from './src/index.ts';
+
+      // Each style: its factory, the options the demo starts with, a tagline, light/dark colours and
+      // the controls shown in the panel.
+      const STYLES = {
+        topo: {
+          factory: topo,
+          demo: { levels: 18, speed: 0.01, resolution: 8, pointerStrength: 0.5 },
+          tagline: 'This is <strong>topo</strong>: move your pointer around and the terrain rises to meet it.',
+          themes: {
+            dark: { lineColor: topo.defaults.lineColor, majorLineColor: topo.defaults.majorLineColor },
+            light: { lineColor: '#b9ae9a', majorLineColor: '#b4532a' },
+          },
+          controls: [
+            { key: 'levels', label: 'Levels', min: 4, max: 60, step: 1 },
+            { key: 'scale', label: 'Scale', min: 0.0004, max: 0.006, step: 0.0001 },
+            { key: 'speed', label: 'Speed', min: 0, max: 0.3, step: 0.005 },
+            { key: 'octaves', label: 'Octaves', min: 1, max: 5, step: 1 },
+            { key: 'resolution', label: 'Resolution', min: 3, max: 24, step: 1 },
+            { key: 'lineOpacity', label: 'Line opacity', min: 0, max: 1, step: 0.05 },
+            { key: 'lineWidth', label: 'Line width', min: 0.25, max: 4, step: 0.25 },
+            { key: 'majorLineWidth', label: 'Index width', min: 0.25, max: 5, step: 0.25 },
+            { key: 'majorEvery', label: 'Index every', min: 0, max: 10, step: 1 },
+            { key: 'pointerRadius', label: 'Pointer radius', min: 20, max: 500, step: 5 },
+            { key: 'pointerStrength', label: 'Pointer lift', min: -1.5, max: 1.5, step: 0.05 },
+            { key: 'lineColor', label: 'Line colour', type: 'color' },
+            { key: 'majorLineColor', label: 'Index colour', type: 'color' },
+          ],
+          seed: true,
+        },
+        dots: {
+          factory: dots,
+          demo: { spacing: 30 },
+          tagline: 'This is <strong>dots</strong>: hover to push the dots aside, click to send a wave.',
+          themes: {
+            dark: { color: dots.defaults.color },
+            light: { color: '#8a7f6c' },
+          },
+          controls: [
+            { key: 'spacing', label: 'Spacing', min: 8, max: 80, step: 1 },
+            { key: 'size', label: 'Dot size', min: 0.5, max: 6, step: 0.1 },
+            { key: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.05 },
+            { key: 'jitter', label: 'Wander', min: 0, max: 8, step: 0.1 },
+            { key: 'jitterSpeed', label: 'Wander speed', min: 0, max: 3, step: 0.05 },
+            { key: 'pointerRadius', label: 'Pointer radius', min: 20, max: 500, step: 5 },
+            { key: 'pointerStrength', label: 'Pointer push', min: -60, max: 60, step: 1 },
+            { key: 'waveStrength', label: 'Wave push', min: 0, max: 40, step: 1 },
+            { key: 'waveSpeed', label: 'Wave speed', min: 100, max: 1500, step: 10 },
+            { key: 'waveWidth', label: 'Wave width', min: 10, max: 200, step: 5 },
+            { key: 'waveDuration', label: 'Wave duration', min: 0.3, max: 5, step: 0.1 },
+            { key: 'color', label: 'Colour', type: 'color' },
+          ],
+        },
+        plus: {
+          factory: plus,
+          demo: { opacity: 0.65, size: 5, weight: 1, spacing: 30, jitter: 1.5 },
+          tagline: 'This is <strong>plus</strong>: the signs turn to face your pointer, click to send a wave.',
+          themes: {
+            dark: { color: plus.defaults.color },
+            light: { color: '#8a7f6c' },
+          },
+          controls: [
+            { key: 'spacing', label: 'Spacing', min: 8, max: 80, step: 1 },
+            { key: 'size', label: 'Arm length', min: 1, max: 16, step: 0.5 },
+            { key: 'weight', label: 'Weight', min: 0.25, max: 5, step: 0.05 },
+            { key: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.05 },
+            { key: 'jitter', label: 'Wander', min: 0, max: 8, step: 0.1 },
+            { key: 'jitterSpeed', label: 'Wander speed', min: 0, max: 3, step: 0.05 },
+            { key: 'pointerAlign', label: 'Face the pointer', min: 0, max: 1, step: 0.05 },
+            { key: 'turnTime', label: 'Turn smoothing', min: 0, max: 1.5, step: 0.05 },
+            { key: 'waveAlign', label: 'Wave: face click', min: 0, max: 1, step: 0.05 },
+            { key: 'waveWeight', label: 'Wave weight', min: 0, max: 4, step: 0.1 },
+            { key: 'waveSpeed', label: 'Wave speed', min: 100, max: 1500, step: 10 },
+            { key: 'waveWidth', label: 'Wave width', min: 10, max: 200, step: 5 },
+            { key: 'waveDuration', label: 'Wave duration', min: 0.3, max: 5, step: 0.1 },
+            { key: 'color', label: 'Colour', type: 'color' },
+          ],
+        },
+      };
+
+      // Engine options are shared by every style.
+      const FADE_CONTROLS = ['Top', 'Right', 'Bottom', 'Left'].map((side) => ({
+        key: `fadeOut${side}`,
+        label: `Fade ${side.toLowerCase()}`,
+        min: 0,
+        max: 600,
+        step: 10,
+        zero: 'off',
+        engine: true,
+      }));
+      const FPS_CONTROLS = [
+        { key: 'maxFps', label: 'FPS interacting', min: 0, max: 120, step: 5, zero: 'uncapped', engine: true },
+        { key: 'idleFps', label: 'FPS idle', min: 0, max: 60, step: 5, zero: 'same', engine: true },
+      ];
+
+      let theme = 'dark';
+      let styleName = 'topo';
+      // The page background starts with a soft fade on every side.
+      const DEMO_ENGINE = { fadeOutTop: 200, fadeOutRight: 200, fadeOutBottom: 200, fadeOutLeft: 200 };
+      const demoStyle = (name) => STYLES[name].factory({ ...STYLES[name].demo, ...STYLES[name].themes[theme] });
+      let bg = createBackground(null, demoStyle(styleName), DEMO_ENGINE);
+
+      // The "scoped to an element" card shows the selected style, sized down for a small box.
+      const CARD_ACCENT = 'rgba(160, 230, 200, 0.9)';
+      const CARD_OPTIONS = {
+        topo: { lineColor: CARD_ACCENT, majorLineColor: CARD_ACCENT, scale: 0.006, pointerRadius: 70 },
+        dots: { color: CARD_ACCENT, spacing: 18, size: 1.4, pointerRadius: 110, pointerStrength: 16 },
+        plus: { color: CARD_ACCENT, spacing: 22, size: 3.5 },
+      };
+      // The second card is the same, with the pattern fading out over its bottom 160 px.
+      let cards = [];
+      function mountCard() {
+        cards.forEach((card) => card.destroy());
+        const style = () => STYLES[styleName].factory(CARD_OPTIONS[styleName]);
+        cards = [createBackground('#card', style()), createBackground('#card-fade', style(), { fadeOutBottom: 160 })];
+      }
+      mountCard();
+
+      // ---- controls -------------------------------------------------------
+      const tabs = document.getElementById('tabs');
+      const controlsEl = document.getElementById('controls');
+      let syncs = [];
+
+      /** Switch the page background to another style, keeping the engine options. */
+      function useStyle(name) {
+        const { engineOptions } = bg;
+        bg.destroy();
+        styleName = name;
+        bg = createBackground(null, demoStyle(name), engineOptions);
+        mountCard();
+        render();
+      }
+
+      function slider(c) {
+        const row = document.createElement('label');
+        row.className = 'row';
+        const input = document.createElement('input');
+        input.type = c.type ?? 'range';
+        if (input.type === 'range') Object.assign(input, { min: c.min, max: c.max, step: c.step });
+        const out = document.createElement('output');
+        // Sliders: label and value, then the slider. Colours: label and swatch on one line.
+        row.append(c.label, input.type === 'range' ? out : input);
+        if (input.type === 'range') row.append(input);
+
+        // Style options go through setOptions, engine options (frame rates, …) through setEngineOptions.
+        const sync = () => {
+          const v = (c.engine ? bg.engineOptions : bg.options)[c.key];
+          input.value = v;
+          out.textContent = input.type !== 'range' ? '' : c.zero && +v === 0 ? c.zero : +(+v).toFixed(4);
+        };
+        input.addEventListener('input', () => {
+          const value = input.type === 'range' ? Number(input.value) : input.value;
+          if (c.engine) bg.setEngineOptions({ [c.key]: value });
+          else bg.setOptions({ [c.key]: value });
+          sync();
+        });
+        syncs.push(sync);
+        sync();
+        return row;
+      }
+
+      // Background: a colour, or transparent (the page's own background shows through).
+      function backgroundRow() {
+        const row = document.createElement('div');
+        row.className = 'row wide';
+        const color = document.createElement('input');
+        color.type = 'color';
+        color.value = bg.engineOptions.backgroundColor ?? '#1b2a3a';
+        const transparent = document.createElement('label');
+        transparent.className = 'check';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = bg.engineOptions.backgroundColor === null;
+        color.disabled = checkbox.checked;
+        transparent.append(checkbox, 'Transparent');
+        const inline = document.createElement('span');
+        inline.className = 'inline';
+        inline.append(transparent, color);
+        row.append('Background colour', inline);
+        const apply = () => {
+          color.disabled = checkbox.checked;
+          bg.setEngineOptions({ backgroundColor: checkbox.checked ? null : color.value });
+        };
+        color.addEventListener('input', apply);
+        checkbox.addEventListener('change', apply);
+        return row;
+      }
+
+      /** Options that differ from the defaults, so copied code shows only what was changed. */
+      function changed(options, defaults) {
+        return Object.fromEntries(Object.entries(options).filter(([key, value]) => value !== defaults[key]));
+      }
+
+      function actions() {
+        const row = document.getElementById('actions');
+        row.replaceChildren();
+        const button = (label, onClick) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = label;
+          b.addEventListener('click', onClick);
+          row.append(b);
+          return b;
+        };
+        if (STYLES[styleName].seed) {
+          button('New seed', () => bg.setOptions({ seed: Math.floor(Math.random() * 2 ** 32) }));
+        }
+        button('Light / dark', () => {
+          theme = theme === 'dark' ? 'light' : 'dark';
+          document.documentElement.dataset.theme = theme;
+          bg.setOptions(STYLES[styleName].themes[theme]);
+          syncs.forEach((sync) => sync());
+        });
+        // The renderer is chosen at creation, so switching recreates the background with the same options.
+        button(`Renderer: ${bg.renderer}`, () => {
+          const renderer = bg.renderer === 'webgl' ? 'canvas2d' : 'webgl';
+          const { options, engineOptions } = bg;
+          bg.destroy();
+          bg = createBackground(null, STYLES[styleName].factory(options), { ...engineOptions, renderer });
+          render();
+        });
+        const pause = button('Pause', () => {
+          const paused = pause.textContent === 'Resume';
+          paused ? bg.resume() : bg.pause();
+          pause.textContent = paused ? 'Pause' : 'Resume';
+        });
+        const copy = button('Copy current config', () => {
+          const options = changed(bg.options, STYLES[styleName].factory.defaults);
+          const engine = changed(bg.engineOptions, engineDefaults);
+          const args = [JSON.stringify(options, null, 2)];
+          const code =
+            `import { createBackground } from 'interactive-bg';\n` +
+            `import { ${styleName} } from 'interactive-bg/${styleName}';\n\n` +
+            `createBackground(null, ${styleName}(${Object.keys(options).length ? args[0] : ''})` +
+            `${Object.keys(engine).length ? `, ${JSON.stringify(engine, null, 2)}` : ''});`;
+          navigator.clipboard?.writeText(code);
+          copy.textContent = 'Copied';
+          setTimeout(() => (copy.textContent = 'Copy current config'), 1200);
+        });
+      }
+
+      function render() {
+        syncs = [];
+        tabs.replaceChildren(
+          ...Object.keys(STYLES).map((name) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = name;
+            b.setAttribute('aria-pressed', String(name === styleName));
+            b.addEventListener('click', () => name !== styleName && useStyle(name));
+            return b;
+          }),
+        );
+        const heading = (text) => Object.assign(document.createElement('h3'), { textContent: text });
+        const grid = (...children) => {
+          const el = document.createElement('div');
+          el.className = 'grid';
+          el.append(...children);
+          return el;
+        };
+        controlsEl.replaceChildren(
+          heading(`Style: ${styleName}`),
+          grid(...STYLES[styleName].controls.map(slider)),
+          heading('Edge fade'),
+          grid(...FADE_CONTROLS.map(slider)),
+          heading('Engine'),
+          grid(...FPS_CONTROLS.map(slider), backgroundRow()),
+        );
+        actions();
+        document.getElementById('tagline').innerHTML =
+          `Interactive animated backgrounds for your website. ${STYLES[styleName].tagline}`;
+      }
+      render();
+
+      const panel = document.getElementById('panel');
+      const toggle = document.getElementById('toggle');
+      const showPanel = (show) => {
+        panel.hidden = !show;
+        toggle.textContent = show ? 'Hide controls' : 'Show controls';
+      };
+      toggle.addEventListener('click', () => showPanel(panel.hidden));
+      // On phones the panel would cover the page, so it starts closed there.
+      showPanel(!matchMedia('(max-width: 640px)').matches);
+    </script>
+  </body>
+</html>
