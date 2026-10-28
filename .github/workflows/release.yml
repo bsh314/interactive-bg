@@ -35,3 +35,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # `changeset publish` tags each published version on the runner, but the action doesn't
+      # always recognise the newer CLI's output and then skips pushing them. Push any new tags here
+      # (a no-op when nothing was published) and create the matching GitHub release.
+      - name: Push release tags
+        run: |
+          git push origin --tags
+          for tag in $(git tag --points-at HEAD); do
+            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes "See [CHANGELOG.md](CHANGELOG.md)."
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
