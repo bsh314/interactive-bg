@@ -10,7 +10,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write # npm provenance
+  id-token: write # npm trusted publishing (OIDC) and provenance
 
 jobs:
   release:
@@ -23,6 +23,8 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+      # Trusted publishing needs npm 11.5.1+; Node 22 ships with npm 10.
+      - run: npm install -g npm@latest
       # Opens a "Version Packages" PR while changesets are pending;
       # once that PR is merged, publishes the new version to npm.
       - uses: changesets/action@v1
@@ -32,9 +34,9 @@ jobs:
           commit: 'chore: version packages'
           title: 'chore: version packages'
         env:
+          # No npm token: npm authenticates with the workflow's OIDC identity, which must be
+          # registered as a trusted publisher on npmjs.com (package settings).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       # `changeset publish` tags each published version on the runner, but the action doesn't
       # always recognise the newer CLI's output and then skips pushing them. Push any new tags here
       # (a no-op when nothing was published) and create the matching GitHub release.
