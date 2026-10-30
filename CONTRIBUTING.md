@@ -88,6 +88,7 @@ Versions are managed with [Changesets](https://github.com/changesets/changesets)
 
 1. **Record a change.** Run `npm run changeset`, choose patch, minor or major, and write a short summary. Commit the generated `.changeset/*.md` together with your change.
 2. **Bump the version.** `npm run version-packages` applies the pending changesets, updates `package.json` and writes `CHANGELOG.md`.
-3. **Publish.** `npm run release` runs every check and then publishes to npm.
+3. **Stage.** `npm run release` runs every check and then stages the version on npm with `npm stage publish`.
+4. **Approve.** A maintainer approves the staged version on npmjs.com (or `npm stage approve <id>`) with 2FA, which makes it public.
 
-On GitHub, `.github/workflows/release.yml` runs these steps for you. Each push to `main` opens or updates a **"Version Packages"** PR, and merging that PR publishes to npm. Publishing uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there is no npm token: the package's npm settings list this repository's `release.yml` as a trusted publisher. Under **Settings → Actions → General**, Actions must be allowed to create pull requests. `.github/workflows/ci.yml` runs `npm run check` on every PR.
+On GitHub, `.github/workflows/release.yml` runs steps 1–3 for you. Each push to `main` opens or updates a **"Version Packages"** PR. Merging that PR stages the new version on npm and creates its git tag and GitHub release; it goes public once approved. The workflow uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there is no npm token: the package's npm settings list this repository's `release.yml` as a trusted publisher allowed to stage. Under **Settings → Actions → General**, Actions must be allowed to create pull requests. `.github/workflows/ci.yml` runs `npm run check` on every PR.

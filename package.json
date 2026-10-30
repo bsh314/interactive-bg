@@ -172,7 +172,7 @@
     "check": "npm run typecheck && npm run test && npm run build",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "npm run check && changeset publish",
+    "release": "npm stage publish",
     "prepublishOnly": "npm run check",
     "size": "node scripts/size.mjs"
   },

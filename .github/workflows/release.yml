@@ -23,28 +23,43 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
-      # Trusted publishing needs npm 11.5.1+; Node 22 ships with npm 10.
-      - run: npm install -g npm@latest
-      # Opens a "Version Packages" PR while changesets are pending;
-      # once that PR is merged, publishes the new version to npm.
+      # Opens or updates the "Version Packages" PR while changesets are pending.
       - uses: changesets/action@v1
+        id: changesets
         with:
           version: npm run version-packages
-          publish: npm run release
           commit: 'chore: version packages'
           title: 'chore: version packages'
         env:
-          # No npm token: npm authenticates with the workflow's OIDC identity, which must be
-          # registered as a trusted publisher on npmjs.com (package settings).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # `changeset publish` tags each published version on the runner, but the action doesn't
-      # always recognise the newer CLI's output and then skips pushing them. Push any new tags here
-      # (a no-op when nothing was published) and create the matching GitHub release.
-      - name: Push release tags
+      # Once that PR is merged, stage the new version on npm. It goes public only after a maintainer
+      # approves it on npmjs.com with 2FA. The git tag marks a version as staged, so later pushes
+      # don't try to stage it again.
+      - name: Check for a new version
+        id: version
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          git push origin --tags
-          for tag in $(git tag --points-at HEAD); do
-            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --notes "See [CHANGELOG.md](CHANGELOG.md)."
-          done
+          tag="v$(node -p 'require("./package.json").version')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          git fetch --quiet --tags
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag is already tagged; nothing to stage."
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Staging needs npm 11.15+; Node 22 ships with npm 10. No npm token: npm authenticates with the
+      # workflow's OIDC identity, registered as a trusted publisher on npmjs.com.
+      - name: Stage on npm
+        if: steps.version.outputs.new == 'true'
+        run: |
+          npm install -g npm@latest
+          npm run release
+      - name: Tag and create the GitHub release
+        if: steps.version.outputs.new == 'true'
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --notes "See [CHANGELOG.md](CHANGELOG.md)."
         env:
+          TAG: ${{ steps.version.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
