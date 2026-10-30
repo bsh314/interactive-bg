@@ -1,5 +1,11 @@
 # interactive-bg
 
+[![npm](https://img.shields.io/npm/v/interactive-bg)](https://www.npmjs.com/package/interactive-bg)
+[![CI](https://github.com/bsh314/interactive-bg/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bsh314/interactive-bg/actions/workflows/ci.yml)
+[![downloads](https://img.shields.io/npm/dm/interactive-bg)](https://www.npmjs.com/package/interactive-bg)
+[![types](https://img.shields.io/npm/types/interactive-bg)](https://www.npmjs.com/package/interactive-bg)
+[![license](https://img.shields.io/npm/l/interactive-bg)](LICENSE)
+
 Animated backgrounds that react to the pointer, for hero sections, cards and full pages. One `<canvas>`, no dependencies, under 7 kB gzipped for the style you use.
 
 **[Live demo](https://bsh314.github.io/interactive-bg/)**
