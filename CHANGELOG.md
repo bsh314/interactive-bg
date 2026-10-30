@@ -1,5 +1,11 @@
 # interactive-bg
 
+## 0.1.1
+
+### Patch Changes
+
+- b8634fb: Published from GitHub Actions with npm trusted publishing. No changes to the library.
+
 ## 0.1.0
 
 ### Minor Changes
