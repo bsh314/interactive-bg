@@ -10,6 +10,10 @@ export { dots } from './dots/index';
 export type { DotsOptions } from './dots/index';
 export { plus } from './plus/index';
 export type { PlusOptions } from './plus/index';
+export { fluid } from './fluid/index';
+export type { FluidOptions } from './fluid/index';
+export { shimmer } from './shimmer/index';
+export type { ShimmerOptions } from './shimmer/index';
 
 // Writing your own style
 export { defineStyle } from './core/style';

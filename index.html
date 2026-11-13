@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>interactive-bg — interactive animated website backgrounds</title>
-    <meta name="description" content="Interactive, animated canvas backgrounds for websites: topographic lines, dot and plus grids. WebGL2 or Canvas 2D, no dependencies." />
+    <meta name="description" content="Interactive, animated canvas backgrounds for websites: topographic lines, dot and plus grids, a pointer-driven fluid simulation. WebGL2 or Canvas 2D, no dependencies." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1116'/%3E%3Cpath d='M10 16h12M16 10v12' stroke='%237dd3a8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"
@@ -208,7 +208,7 @@
     <button class="toggle" id="toggle" type="button">Hide controls</button>
 
     <script type="module">
-      import { createBackground, dots, engineDefaults, plus, topo } from './src/index.ts';
+      import { createBackground, dots, engineDefaults, fluid, plus, shimmer, topo } from './src/index.ts';
 
       // Each style: its factory, the options the demo starts with, a tagline, light/dark colours and
       // the controls shown in the panel.
@@ -286,6 +286,46 @@
             { key: 'color', label: 'Colour', type: 'color' },
           ],
         },
+        fluid: {
+          factory: fluid,
+          demo: { resolution: 128, radius: 75, force: 6000, curl: 10, fade: 0.3, opacity: 0.85 },
+          tagline: 'This is <strong>fluid</strong>: move your pointer to stir the smoke, click for a burst.',
+          themes: {
+            dark: { color: null, opacity: 0.85 },
+            light: { color: '#b4532a', opacity: 0.9, fade: 0.55 },
+          },
+          controls: [
+            { key: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.05 },
+            { key: 'curl', label: 'Curl', min: 0, max: 50, step: 1 },
+            { key: 'force', label: 'Stir force', min: 1000, max: 12000, step: 250 },
+            { key: 'radius', label: 'Splash radius', min: 10, max: 200, step: 5 },
+            { key: 'fade', label: 'Smoke fade', min: 0.1, max: 3, step: 0.05 },
+            { key: 'resolution', label: 'Resolution', min: 64, max: 192, step: 8 },
+            { key: 'colorSpeed', label: 'Colour changes', min: 0, max: 30, step: 1 },
+            { key: 'color', label: 'Colour', type: 'color', nullable: true },
+            { key: 'shading', label: 'Shading', type: 'check' },
+          ],
+        },
+        shimmer: {
+          factory: shimmer,
+          demo: { opacity: 1, speed: 1, frequency: 7, colorScale: 10, chroma: 0.02, warp: 1 },
+          tagline: 'This is <strong>shimmer</strong>: move your pointer to bend the iridescent band field.',
+          themes: {
+            dark: { opacity: 1, baseColor: '#5735ff' },
+            light: { opacity: 0.22, baseColor: '#ffffff' },
+          },
+          engine: { fadeOutTop: 0, fadeOutRight: 0, fadeOutBottom: 0, fadeOutLeft: 0 },
+          controls: [
+            { key: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.05 },
+            { key: 'speed', label: 'Flow speed', min: 0, max: 3, step: 0.05 },
+            { key: 'frequency', label: 'Frequency', min: 1, max: 20, step: 0.5 },
+            { key: 'colorScale', label: 'Band contrast', min: 1, max: 20, step: 0.5 },
+            { key: 'chroma', label: 'Dispersion', min: 0, max: 0.1, step: 0.005 },
+            { key: 'warp', label: 'Warp', min: 0, max: 2, step: 0.05 },
+            { key: 'pointerStrength', label: 'Pointer bend', min: 0, max: 1.5, step: 0.05 },
+            { key: 'baseColor', label: 'Base colour', type: 'color' },
+          ],
+        },
       };
 
       // Engine options are shared by every style.
@@ -316,6 +356,15 @@
         topo: { lineColor: CARD_ACCENT, majorLineColor: CARD_ACCENT, scale: 0.006, pointerRadius: 70 },
         dots: { color: CARD_ACCENT, spacing: 18, size: 1.4, pointerRadius: 110, pointerStrength: 16 },
         plus: { color: CARD_ACCENT, spacing: 22, size: 3.5 },
+        fluid: {
+          color: '#a0e6c8',
+          resolution: 96,
+          radius: 26,
+          force: 6000,
+          curl: 14,
+          fade: 0.3,
+          opacity: 0.85,
+        },
       };
       // The second card is the same, with the pattern fading out over its bottom 160 px.
       let cards = [];
@@ -333,7 +382,9 @@
 
       /** Switch the page background to another style, keeping the engine options. */
       function useStyle(name) {
-        const { engineOptions } = bg;
+        // Each style brings its own demo engine defaults (shimmer has no edge fade);
+        // other engine options such as frame rates and the background carry over.
+        const engineOptions = { ...bg.engineOptions, ...(STYLES[name].engine ?? DEMO_ENGINE) };
         bg.destroy();
         styleName = name;
         bg = createBackground(null, demoStyle(name), engineOptions);
@@ -342,8 +393,58 @@
       }
 
       function slider(c) {
-        const row = document.createElement('label');
+        const row = document.createElement(c.type === 'color' && c.nullable ? 'div' : 'label');
         row.className = 'row';
+
+        if (c.type === 'check') {
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          row.append(c.label, input);
+          const sync = () => {
+            input.checked = Boolean((c.engine ? bg.engineOptions : bg.options)[c.key]);
+          };
+          input.addEventListener('change', () => {
+            if (c.engine) bg.setEngineOptions({ [c.key]: input.checked });
+            else bg.setOptions({ [c.key]: input.checked });
+            sync();
+          });
+          syncs.push(sync);
+          sync();
+          return row;
+        }
+
+        if (c.type === 'color' && c.nullable) {
+          const check = document.createElement('input');
+          check.type = 'checkbox';
+          const cycle = document.createElement('label');
+          cycle.className = 'check';
+          cycle.append(check, 'Cycle');
+          const input = document.createElement('input');
+          input.type = 'color';
+          const inline = document.createElement('span');
+          inline.className = 'inline';
+          inline.append(cycle, input);
+          row.append(c.label, inline);
+          const sync = () => {
+            const value = bg.options[c.key];
+            check.checked = value == null;
+            input.disabled = check.checked;
+            if (value) input.value = value;
+          };
+          const apply = () => {
+            bg.setOptions({ [c.key]: check.checked ? null : input.value });
+            sync();
+          };
+          check.addEventListener('change', apply);
+          input.addEventListener('input', () => {
+            check.checked = false;
+            apply();
+          });
+          syncs.push(sync);
+          sync();
+          return row;
+        }
+
         const input = document.createElement('input');
         input.type = c.type ?? 'range';
         if (input.type === 'range') Object.assign(input, { min: c.min, max: c.max, step: c.step });

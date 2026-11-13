@@ -12,6 +12,12 @@ export const entries = {
   'plus/index': 'src/plus/index.ts',
   'plus/webgl': 'src/plus/webgl.ts',
   'plus/canvas2d': 'src/plus/canvas2d.ts',
+  'fluid/index': 'src/fluid/index.ts',
+  'fluid/webgl': 'src/fluid/webgl.ts',
+  'fluid/canvas2d': 'src/fluid/canvas2d.ts',
+  'shimmer/index': 'src/shimmer/index.ts',
+  'shimmer/webgl': 'src/shimmer/webgl.ts',
+  'shimmer/canvas2d': 'src/shimmer/canvas2d.ts',
 };
 
 // `npm run dev` serves index.html (the demo). `npm run build` builds the library twice:

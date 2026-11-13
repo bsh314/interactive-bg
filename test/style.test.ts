@@ -8,6 +8,12 @@ import * as dotsWebgl from '../src/dots/webgl';
 import * as plusAuto from '../src/plus';
 import * as plusCanvas2d from '../src/plus/canvas2d';
 import * as plusWebgl from '../src/plus/webgl';
+import * as fluidAuto from '../src/fluid';
+import * as fluidCanvas2d from '../src/fluid/canvas2d';
+import * as fluidWebgl from '../src/fluid/webgl';
+import * as shimmerAuto from '../src/shimmer';
+import * as shimmerCanvas2d from '../src/shimmer/canvas2d';
+import * as shimmerWebgl from '../src/shimmer/webgl';
 import { topo } from '../src/topo';
 import * as topoCanvas2d from '../src/topo/canvas2d';
 import * as topoWebgl from '../src/topo/webgl';
@@ -46,6 +52,8 @@ describe('style entry points', () => {
     ['topo', topo, topoWebgl.topo, topoCanvas2d.topo],
     ['dots', dotsAuto.dots, dotsWebgl.dots, dotsCanvas2d.dots],
     ['plus', plusAuto.plus, plusWebgl.plus, plusCanvas2d.plus],
+    ['fluid', fluidAuto.fluid, fluidWebgl.fluid, fluidCanvas2d.fluid],
+    ['shimmer', shimmerAuto.shimmer, shimmerWebgl.shimmer, shimmerCanvas2d.shimmer],
   ])('%s: auto has WebGL then Canvas 2D, the others only their own', (name, auto, webgl, canvas2d) => {
     expect(names(auto)).toEqual(['webgl', 'canvas2d']);
     expect(names(webgl)).toEqual(['webgl']);

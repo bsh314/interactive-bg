@@ -10,6 +10,8 @@
     "webgl",
     "topographic",
     "contour",
+    "fluid",
+    "shimmer",
     "hero",
     "generative"
   ],
@@ -50,6 +52,18 @@
       ],
       "plus/*": [
         "./dist/plus/*.d.ts"
+      ],
+      "fluid": [
+        "./dist/fluid/index.d.ts"
+      ],
+      "fluid/*": [
+        "./dist/fluid/*.d.ts"
+      ],
+      "shimmer": [
+        "./dist/shimmer/index.d.ts"
+      ],
+      "shimmer/*": [
+        "./dist/shimmer/*.d.ts"
       ]
     }
   },
@@ -154,6 +168,66 @@
       "require": {
         "types": "./dist/plus/canvas2d.d.cts",
         "default": "./dist/plus/canvas2d.cjs"
+      }
+    },
+    "./fluid": {
+      "import": {
+        "types": "./dist/fluid/index.d.ts",
+        "default": "./dist/fluid/index.js"
+      },
+      "require": {
+        "types": "./dist/fluid/index.d.cts",
+        "default": "./dist/fluid/index.cjs"
+      }
+    },
+    "./fluid/webgl": {
+      "import": {
+        "types": "./dist/fluid/webgl.d.ts",
+        "default": "./dist/fluid/webgl.js"
+      },
+      "require": {
+        "types": "./dist/fluid/webgl.d.cts",
+        "default": "./dist/fluid/webgl.cjs"
+      }
+    },
+    "./fluid/canvas2d": {
+      "import": {
+        "types": "./dist/fluid/canvas2d.d.ts",
+        "default": "./dist/fluid/canvas2d.js"
+      },
+      "require": {
+        "types": "./dist/fluid/canvas2d.d.cts",
+        "default": "./dist/fluid/canvas2d.cjs"
+      }
+    },
+    "./shimmer": {
+      "import": {
+        "types": "./dist/shimmer/index.d.ts",
+        "default": "./dist/shimmer/index.js"
+      },
+      "require": {
+        "types": "./dist/shimmer/index.d.cts",
+        "default": "./dist/shimmer/index.cjs"
+      }
+    },
+    "./shimmer/webgl": {
+      "import": {
+        "types": "./dist/shimmer/webgl.d.ts",
+        "default": "./dist/shimmer/webgl.js"
+      },
+      "require": {
+        "types": "./dist/shimmer/webgl.d.cts",
+        "default": "./dist/shimmer/webgl.cjs"
+      }
+    },
+    "./shimmer/canvas2d": {
+      "import": {
+        "types": "./dist/shimmer/canvas2d.d.ts",
+        "default": "./dist/shimmer/canvas2d.js"
+      },
+      "require": {
+        "types": "./dist/shimmer/canvas2d.d.cts",
+        "default": "./dist/shimmer/canvas2d.cjs"
       }
     },
     "./package.json": "./package.json"

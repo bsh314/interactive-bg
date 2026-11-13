@@ -36,6 +36,14 @@ const scenarios = [
   { name: 'plus canvas2d + pointer', style: 'plus', engine: { renderer: 'canvas2d' }, pointer: true },
   { name: 'plus webgl', style: 'plus', engine: { renderer: 'webgl' } },
   { name: 'plus webgl + pointer', style: 'plus', engine: { renderer: 'webgl' }, pointer: true },
+  { name: 'fluid canvas2d', style: 'fluid', engine: { renderer: 'canvas2d' } },
+  { name: 'fluid canvas2d + pointer', style: 'fluid', engine: { renderer: 'canvas2d' }, pointer: true },
+  { name: 'fluid webgl', style: 'fluid', engine: { renderer: 'webgl' } },
+  { name: 'fluid webgl + pointer', style: 'fluid', engine: { renderer: 'webgl' }, pointer: true },
+  { name: 'shimmer canvas2d', style: 'shimmer', engine: { renderer: 'canvas2d' } },
+  { name: 'shimmer canvas2d + pointer', style: 'shimmer', opts: { pointerStrength: 0.6 }, engine: { renderer: 'canvas2d' }, pointer: true },
+  { name: 'shimmer webgl', style: 'shimmer', engine: { renderer: 'webgl' } },
+  { name: 'shimmer webgl + pointer', style: 'shimmer', opts: { pointerStrength: 0.6 }, engine: { renderer: 'webgl' }, pointer: true },
 ];
 
 const MB = (b) => (b / 1024 / 1024).toFixed(1);

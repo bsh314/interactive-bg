@@ -21,7 +21,8 @@ npm run bench:memory  # memory & CPU benchmark (macOS, needs Google Chrome)
 ```
 src/
   index.ts            public API: engine, every style (both renderers), style-writing helpers
-  topo/ dots/ plus/   the per-style import paths, one module each:
+  topo/ dots/ plus/ fluid/ shimmer/
+                      the per-style import paths, one module each:
     index.ts            interactive-bg/<style>           both renderers
     webgl.ts            interactive-bg/<style>/webgl     WebGL2 only
     canvas2d.ts         interactive-bg/<style>/canvas2d  Canvas 2D only
@@ -41,6 +42,9 @@ src/
   styles/
     dots/             dot grid: webgl (vertex shader) + canvas2d renderers
     plus/             "+" grid: webgl (vertex + fragment shader) + canvas2d renderers
+    fluid/            Navier-Stokes fluid: options, colour cycling, shared settings,
+                      webgl (GPU solver in shaders) + simulation/canvas2d (CPU solver)
+    shimmer/          warped sine-band field: webgl + a low-res field/canvas2d
     topo/             one folder per style
       definition.ts   everything but the renderers: name, defaults, animates
       options.ts      options, defaults, resolving
@@ -70,7 +74,7 @@ Engine features that every style can use (a new engine option, a new `Frame` fie
 
 ## Benchmarks
 
-`npm run bench` opens `bench/index.html`. It drives frames synchronously on a 1920×1080 canvas and reports ms per frame (`?renderer=canvas2d|webgl`, `?dpr=1|2`, `?frames=N`, `?flush=0` to skip forcing rasterization). `npm run bench:memory` runs each scenario in a fresh headless Chrome. It reports JS heap, canvas size, and the physical footprint and CPU time of the renderer and GPU processes, each compared with a blank page. Unlike RSS, the physical footprint includes GPU memory. It also measures a "floor": an empty animated canvas. `bench/realtime.html` runs the real animation loop and reports main-thread ms per second, draws per second and wake-ups per second, first with plain drift, then with the pointer moving, then with it resting over the page (`?style=topo|dots|plus`, `?renderer=`).
+`npm run bench` opens `bench/index.html`. It drives frames synchronously on a 1920×1080 canvas and reports ms per frame (`?renderer=canvas2d|webgl`, `?dpr=1|2`, `?frames=N`, `?flush=0` to skip forcing rasterization). `npm run bench:memory` runs each scenario in a fresh headless Chrome. It reports JS heap, canvas size, and the physical footprint and CPU time of the renderer and GPU processes, each compared with a blank page. Unlike RSS, the physical footprint includes GPU memory. It also measures a "floor": an empty animated canvas. `bench/realtime.html` runs the real animation loop and reports main-thread ms per second, draws per second and wake-ups per second, first with plain drift, then with the pointer moving, then with it resting over the page (`?style=topo|dots|plus|fluid|shimmer`, `?renderer=`).
 
 ## How the renderers work
 
@@ -79,6 +83,10 @@ For `topo`, the WebGL renderer draws the contour lines per pixel in a fragment s
 `plus` works much like `dots`. Each sign's eased angle is kept on the CPU, using a cheap polynomial in place of `atan2`. This work is skipped entirely on frames where nothing it depends on has changed, such as a resting pointer once the signs have settled, and a sign counts as settled once its arm tips are within 0.05 px of where they're heading, so the frame rate drops back to idle quickly. In WebGL, the angles go to the GPU in one small buffer, uploaded only on frames where they changed, then a vertex shader places every sign and a fragment shader draws the cross. In Canvas 2D, each weight is one path of round-capped lines.
 
 For `dots`, the WebGL renderer places every dot in a vertex shader and draws them all in one call. The CPU only sets a few values per frame. The Canvas 2D renderer computes every dot's position on the CPU and draws the dots as round-capped zero-length lines, which is about 4× faster than `arc()` and looks the same. For `dots`, Canvas 2D is a good choice too: it uses about 20 MB less memory than WebGL for about the same total CPU, at a somewhat higher main-thread cost.
+
+For `fluid`, the WebGL renderer runs a stable-fluids solver entirely on the GPU. Each frame it applies pointer and click splats, then runs curl, vorticity confinement, divergence, a 20-iteration pressure solve, gradient subtraction, and semi-Lagrangian advection of velocity and dye, before drawing the dye through a shading pass. Only a handful of uniforms and one small draw per pass touch the CPU. The Canvas 2D renderer runs the same steps in TypeScript on a small grid (`resolution`, 128 cells on the longer side by default) and draws the dye field as one upscaled image. It is intentionally coarser: it is the fallback for browsers without WebGL2 or the float render-target extension, it draws the smoke flat (no `shading`), and it costs a few milliseconds of main-thread time per frame while the smoke is moving.
+
+For `shimmer`, the WebGL renderer is a direct port of the reference: six coupled sine/cosine warp steps, three channel offsets for dispersion, `pow` to carve out the bands, and an 80/20 mix of the warped colour and a base colour. The Canvas 2D renderer evaluates the same field at 128 px on the longer side, 12 times a second, and redraws the cached image on frames in between. The field is analytic, so there is no simulation state or GPU extension involved.
 
 Most memory goes to the canvas pixels on the GPU, so it grows with screen size and with the square of `maxDpr`. `1.5` (the default) looks practically the same as `2` for thin lines; `1` saves roughly 40% more on large screens.
 

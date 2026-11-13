@@ -6,16 +6,16 @@
 [![types](https://img.shields.io/npm/types/interactive-bg)](https://www.npmjs.com/package/interactive-bg)
 [![license](https://img.shields.io/npm/l/interactive-bg)](LICENSE)
 
-Animated backgrounds that react to the pointer, for hero sections, cards and full pages. One `<canvas>`, no dependencies, under 7 kB gzipped for the style you use.
+Animated backgrounds that react to the pointer, for hero sections, cards and full pages. One `<canvas>`, no dependencies, under 10 kB gzipped for the style you use.
 
 **[Live demo](https://bsh314.github.io/interactive-bg/)**
 
-| `topo` | `dots` | `plus` |
-| --- | --- | --- |
-| ![topo](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/topo.png) | ![dots](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/dots.png) | ![plus](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/plus.png) |
-| Topographic contour lines that drift slowly. The terrain rises under the pointer. | A grid of dots. The pointer pushes them aside; a click sends out a wave. | A grid of "+" signs that turn to point at the pointer; a click sends out a wave. |
+| `topo` | `dots` | `plus` | `fluid` | `shimmer` |
+| --- | --- | --- | --- | --- |
+| ![topo](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/topo.png) | ![dots](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/dots.png) | ![plus](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/plus.png) | ![fluid](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/fluid.png) | ![shimmer](https://raw.githubusercontent.com/bsh314/interactive-bg/main/docs/shimmer.png) |
+| Topographic contour lines that drift slowly. The terrain rises under the pointer. | A grid of dots. The pointer pushes them aside; a click sends out a wave. | A grid of "+" signs that turn to point at the pointer; a click sends out a wave. | A fluid simulation that follows the pointer in curling, smoke-like plumes. Clicks send out a burst. | Iridescent light bands from a warped sine field, split into rainbow fringes. The pointer bends them. |
 
-- **Small.** Import one style with one renderer and ship only that: 4.5–6.9 kB gzipped, engine included.
+- **Small.** Import one style with one renderer and ship only that: 4.5–9.4 kB gzipped, engine included.
 - **Cheap to run.** Idle animation renders at the lowest frame rate that still looks smooth, stops when nothing moves, and pauses off-screen and in background tabs. The grid styles idle on less CPU than an empty animated canvas.
 - **GPU first.** WebGL2, with Canvas 2D as a fallback or as a deliberate choice.
 - **Polite.** Respects `prefers-reduced-motion`, caps pixel density, never blocks clicks on your content.
@@ -66,8 +66,12 @@ What your app bundles, `createBackground` included (minified / gzipped):
 | `topo` | 20.0 / 8.1 kB   | 16.5 / 6.9 kB   | 12.5 / 5.3 kB   |
 | `dots` | 17.9 / 7.3 kB   | 14.4 / 6.0 kB   | 10.4 / 4.5 kB   |
 | `plus` | 19.3 / 8.0 kB   | 16.2 / 6.8 kB   | 11.7 / 5.0 kB   |
+| `fluid` | 27.5 / 9.4 kB   | 21.8 / 7.4 kB   | 12.7 / 5.3 kB   |
+| `shimmer` | 15.0 / 6.2 kB  | 11.9 / 5.0 kB   | 9.7 / 4.2 kB    |
 
 With a single renderer there is no fallback: if the browser can't provide it, the background stays empty, `bg.renderer` is `null`, and your page carries on.
+
+The `fluid` and `shimmer` styles are exceptions: their Canvas 2D builds compute the same effect on a small grid, so they are softer and coarser than the GPU versions, but keep working without WebGL2 (float render targets are only needed by `fluid`).
 
 ## Performance
 
@@ -81,10 +85,15 @@ Full-screen 1920×1080 background in Chrome on an Apple M1 Pro.
 | `dots`, Canvas 2D | 0.4%              | 1.7%                        | 4.3%      | 12%                 | ~70 MB  |
 | `plus`, WebGL     | 0.1%              | 0.9%                        | 3.6%      | 11%                 | ~90 MB  |
 | `plus`, Canvas 2D | 0.4%              | 2.5%                        | 3.9%      | 13%                 | ~70 MB  |
+| `fluid`, WebGL    | 0.6%              | 0.9%                        | 4.8%      | 16%                 | ~120 MB |
+| `fluid`, Canvas 2D | 8.9%             | 9.7%                        | 4.8%      | 17%                 | ~80 MB  |
+| `shimmer`, WebGL  | 0.2%              | 0.4%                        | 3.4%      | 10%                 | ~100 MB |
+| `shimmer`, Canvas 2D | 8.3%           | 10.2%                       | 11%       | 19%                 | ~85 MB  |
 | Empty canvas, 30 fps, for reference | — | —                    | 6.4%      | —                   | ~85 MB  |
 
 - **Main thread**: share of the page's main thread the background takes, so what's left for your app.
 - **CPU** and **Memory**: the browser's renderer and GPU processes, as % of one core and MB above a blank page. Most of the memory is the canvas itself, which the browser needs for any full-screen canvas.
+- **`fluid`** has no ambient animation: the idle figures cover the gentle burst after mount. After a few seconds without input the field is cleared, the last frame is empty, and the style stops until the pointer moves again.
 
 Reproduce with `npm run bench:memory` and `bench/realtime.html`; see [CONTRIBUTING.md](CONTRIBUTING.md#benchmarks).
 
@@ -192,13 +201,46 @@ Shared by every style.
 
 </details>
 
+<details>
+<summary><code>fluid</code></summary>
+
+| Option       | Default | What it does                                                                                     |
+| ------------ | ------- | ------------------------------------------------------------------------------------------------ |
+| `color`      | `null`  | Colour of the smoke, as any CSS colour. `null` picks a new hue several times a second; set a colour to keep it fixed. |
+| `colorSpeed` | `10`    | How many times per second the smoke picks a new hue while `color` is `null`.                      |
+| `opacity`    | `0.85`  | Opacity of the smoke, `0`–`1`. Multiplies any alpha in `color`.                                   |
+| `curl`       | `10`    | How strongly the fluid curls back on itself. `0` = no swirl.                                     |
+| `force`      | `6000`  | How hard pointer movement stirs the fluid. `0` = the pointer only adds dye.                       |
+| `radius`     | `75`    | Radius of each splash, in CSS pixels.                                                             |
+| `fade`       | `0.3`   | Roughly how long the smoke takes to fade out, in seconds.                                        |
+| `resolution` | `128`   | Simulation grid size (longer side, in cells). The Canvas 2D fallback runs the whole simulation at this size. |
+| `shading`    | `true`  | Light the smoke from its own gradients, for a sense of depth. WebGL only; the Canvas 2D fallback draws flat smoke. |
+
+</details>
+
+<details>
+<summary><code>shimmer</code></summary>
+
+| Option            | Default   | What it does                                                                                     |
+| ----------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| `opacity`         | `1`       | Opacity of the field. `1` is the opaque reference canvas; lower it over a page colour to imitate a translucent veil. |
+| `speed`           | `1`       | Flow speed. `1` matches the reference's slow drift. `0` = still.                                 |
+| `frequency`       | `7`       | Sine frequency of the bands. Higher = more, narrower bands.                                      |
+| `colorScale`      | `10`      | Gamma applied to the bands. Higher = darker gaps and brighter crests.                            |
+| `baseColor`       | `#5735ff` | Colour mixed into the 20% base of the field.                                                     |
+| `chroma`          | `0.02`    | Separation between the red, green and blue warps: chromatic dispersion.                          |
+| `warp`            | `1`       | Strength of the sine/cosine distortion. `0` = straight bands.                                    |
+| `pointerStrength` | `0.35`    | Pointer lens that bends the bands locally. `0` keeps the reference's ambient field.              |
+
+</details>
+
 ## Your own style
 
 The engine handles the canvas, sizing, frame loop, pointer, visibility, reduced motion, background colour and edge fades. A style only says what to draw, in WebGL2, Canvas 2D or both. See [docs/custom-styles.md](docs/custom-styles.md).
 
 ## Browser support
 
-Current Chrome, Edge, Firefox and Safari (15+). WebGL2 is used where available; every built-in style also has a Canvas 2D renderer.
+Current Chrome, Edge, Firefox and Safari (15+). WebGL2 is used where available; every built-in style also has a Canvas 2D renderer. `fluid`'s WebGL2 renderer also needs floating-point render targets (`EXT_color_buffer_float`); without them, the Canvas 2D build runs the same simulation on the CPU.
 
 ## Contributing
 

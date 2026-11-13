@@ -21,7 +21,7 @@
         frames=300     measured frames per scenario
         flush=1        force rasterisation after each frame (GPU readback of 1px)
         renderer=canvas2d|webgl
-        style=topo|dots|plus
+        style=topo|dots|plus|fluid|shimmer
     -->
     <script type="module">
       const params = new URLSearchParams(location.search);
@@ -114,6 +114,17 @@
           ['wander+pointer', {}, { pointer: true }],
           ['waves (click every 0.25 s)', {}, { pointer: true, clickEvery: 15 }],
           ['dense (spacing 12)', { spacing: 12 }],
+        ],
+        fluid: [
+          ['burst', {}],
+          ['stir+pointer', {}, { pointer: true }],
+          ['clicks (every 0.25 s)', {}, { pointer: true, clickEvery: 15 }],
+          ['high resolution', { resolution: 192 }],
+        ],
+        shimmer: [
+          ['flow', {}],
+          ['flow+pointer', { pointerStrength: 0.6 }, { pointer: true }],
+          ['dense bands (frequency 14)', { frequency: 14, colorScale: 12 }],
         ],
       };
       const results = [];

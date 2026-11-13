@@ -18,7 +18,7 @@ const scenarios = [
   ['engine only', `export { createBackground } from ${dist('index')};`],
   ['everything (root, all styles)', `export * from ${dist('index')};`],
 ];
-for (const style of ['topo', 'dots', 'plus']) {
+for (const style of ['topo', 'dots', 'plus', 'fluid', 'shimmer']) {
   scenarios.push(
     [`${style} via root import`, `export { createBackground, ${style} } from ${dist('index')};`],
     ...['index', 'webgl', 'canvas2d'].map((variant) => [
