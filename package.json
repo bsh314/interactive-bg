@@ -1,6 +1,6 @@
 {
   "name": "interactive-bg",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Lightweight, interactive animated backgrounds for websites: pick a style, drop it behind your content. WebGL with a Canvas 2D fallback, zero dependencies, import only the renderer you need.",
   "keywords": [
     "background",
